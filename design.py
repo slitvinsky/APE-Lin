@@ -127,7 +127,7 @@ class Ui_MainWindow(object):
         self.searchButton.setFont(font)
         self.searchButton.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("search.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("img/search.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.searchButton.setIcon(icon)
         self.searchButton.setObjectName("searchButton")
         self.lineEdit = QtWidgets.QLineEdit(self.centralwidget)
