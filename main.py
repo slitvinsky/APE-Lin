@@ -2,11 +2,10 @@ import re
 import sys
 import time
 from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import QDir, Qt, QUrl
+from PyQt5.QtCore import QUrl
 from PyQt5.QtWidgets import qApp, QFileDialog, QMessageBox, QTableWidgetItem, QWidget, QVBoxLayout, QStyle
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtGui import QPixmap
 import design
 import insert
 import togroup
@@ -21,50 +20,45 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
         self.tableWidget.setColumnCount(3)
-        self.tableWidget.doubleClicked.connect(self.TableClick)
+        self.tableWidget.doubleClicked.connect(self.tableclick)
         self.tableWidget.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.tableWidget.setHorizontalHeaderLabels(["Название", "Группа", "URL"])
+        self.label.setText('Каналов: ')
+        self.label_2.setText('Каналов: ')
         self.tableWidget_2.setColumnCount(3)
         self.tableWidget_2.setHorizontalHeaderLabels(["Название", "Группа", "URL"])
         self.action_Quit.triggered.connect(qApp.quit)
-        self.action_Open.triggered.connect(self.getFileName)
-        self.actionSave.triggered.connect(self.saveFile)
+        self.action_Open.triggered.connect(self.getfilename)
+        self.actionSave.triggered.connect(self.savefile)
         self.action_About.triggered.connect(self.msgabout)
+        self.actionNew.triggered.connect(self.cleartablenew)
+        self.openFromUrl.triggered.connect(self.showfromurl)
+        self.testButton.clicked.connect(self.checkstatus)
+        self.insertButton.clicked.connect(self.showinsert)
+        self.moveUpButton.clicked.connect(self.moveup)
+        self.moveDownButton.clicked.connect(self.movedown)
+        self.moveButton.clicked.connect(self.movestring)
+        self.deleteButton.clicked.connect(self.deleterow)
+        self.moveallButton.clicked.connect(self.moveall)
+        self.groupButton.clicked.connect(self.showtogroup)
+        self.lineEdit.returnPressed.connect(self.searchitem)
         self.clearButton.clicked.connect(self.clearoffline)
-        self.actionNew.triggered.connect(self.clearTableNew)
-        self.openFromUrl.triggered.connect(self.showFromUrl)
-        self.testButton.clicked.connect(self.checkStatus)
-        self.insertButton.clicked.connect(self.showInsert)
-        self.moveButton.clicked.connect(self.moveString)
-        self.deleteButton.clicked.connect(self.deleteRow)
-        self.moveallButton.clicked.connect(self.moveAll)
-        self.groupButton.clicked.connect(self.showToGroup)
-        self.lineEdit.returnPressed.connect(self.searchItem)
-        self.moveUpButton.clicked.connect(self.moveUp)
-        self.moveDownButton.clicked.connect(self.moveDown)
         self.winsert = None
         self.player = None
         self.wtogroup = None
-        self.label.setText('Каналов: ')
-        self.label_2.setText('Каналов: ')
         self.setStyleSheet('background-color: #636363;color: #fff;')
-        #self.groupButton.setStyleSheet('background: #9da399; color: black; border-style: solid; border-width: 1.5px; border-radius: 8px')
         self.groupButton.setToolTip('Добавить выбранные каналы в группу')
-        #self.insertButton.setStyleSheet('background: #9da399; color: black; border-style: solid; border-width: 1.5px; border-radius: 8px')
         self.insertButton.setToolTip('Добавить канал')
-        #self.testButton.setStyleSheet('background: #9da399; color: black; border-style: solid; border-radius: 8px; border-width: 1.5px')
         self.testButton.setToolTip('Тестирование каналов')
-        #self.deleteButton.setStyleSheet('background: #9da399; color: black; border-style: solid; border-radius: 8px; border-width: 1.5px')
         self.deleteButton.setToolTip('Удалить выбранные каналы')
         self.offlinelabel.setStyleSheet('color: red')
         self.moveButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowRight))
-        self.moveUpButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowUp))
-        self.moveDownButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowDown))
         self.testButton.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
-        self.moveButton.setStyleSheet('background: #9da399; border-style: solid; border-radius: 8px; border-width: 1.5px')
-        self.moveallButton.setStyleSheet('background: #9da399; border-style: solid; border-radius: 8px; border-width: 1.5px')
-        #self.searchButton.setStyleSheet('background: #9da399; color: white; border-style: solid; border-radius: 8px; border-width: 1.5px')
-        self.searchButton.clicked.connect(self.searchItem)
+        self.moveUpButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowUp))
+        self.moveUpButton.setToolTip('Переместить канал выше')
+        self.moveDownButton.setIcon(self.style().standardIcon(QStyle.SP_ArrowDown))
+        self.moveDownButton.setToolTip('Переместить канал ниже')
+        self.searchButton.clicked.connect(self.searchitem)
         self.tableWidget.setStyleSheet('background-color: #9da399;color: #000;border-style: none; border-radius: 8px')
         self.tableWidget_2.setStyleSheet('background-color: #9da399;color: #000;border-style: none; border-radius: 8px')
         self.progressBar.setStyleSheet('background: #9da399; border-style: none; border-radius: 8px')
@@ -75,55 +69,29 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.lineEdit.setStyleSheet('background: #9da399; border-style: none; border-radius: 8px')
         self.progressBar.setVisible(False)
         self.testButton.setEnabled(False)
+        self.clearButton.setVisible(False)
         self.groupButton.setEnabled(False)
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget_2.verticalHeader().setVisible(False)
-        self.clearButton.setVisible(False)
 
-    def clearoffline(self):
-        indexes = sorted(self.offlinechannels, reverse=True)
-        for rowidx in indexes:
-            self.tableWidget.removeRow(rowidx)
-        self.clearButton.setVisible(False)
-        self.label.setText('Каналов: ' + str(self.tableWidget.rowCount()))
-        self.offlinelabel.setVisible(False)
-        self.onlinelabel.setVisible(False)
-    def moveDown(self):
-        row = self.tableWidget_2.currentRow()
-        column = self.tableWidget_2.currentColumn();
-        if row < self.tableWidget_2.rowCount() - 1:
-            self.tableWidget_2.insertRow(row + 2)
-            for i in range(self.tableWidget_2.columnCount()):
-                self.tableWidget_2.setItem(row + 2, i, self.tableWidget_2.takeItem(row, i))
-                self.tableWidget_2.setCurrentCell(row + 2, column)
-            self.tableWidget_2.removeRow(row)
-
-    def moveUp(self):
-        row = self.tableWidget_2.currentRow()
-        column = self.tableWidget_2.currentColumn();
-        if row > 0:
-            self.tableWidget_2.insertRow(row - 1)
-            for i in range(self.tableWidget_2.columnCount()):
-                self.tableWidget_2.setItem(row - 1, i, self.tableWidget_2.takeItem(row + 1, i))
-                self.tableWidget_2.setCurrentCell(row - 1, column)
-            self.tableWidget_2.removeRow(row + 1)
-    def getFileName(self):
+    def getfilename(self):
         self.progressBar.setValue(0)
         self.tableWidget.clear()
         self.tableWidget.setRowCount(0)
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setHorizontalHeaderLabels(["Название", "Группа", "URL"])
-        self.fname = QFileDialog.getOpenFileName(self, 'Open file', '/home',"Playlist (*.m3u *.m3u8)")[0]
+        self.fname = QFileDialog.getOpenFileName(self, 'Open file', '/home', "Playlist (*.m3u *.m3u8)")[0]
         try:
-            self.my_file = open(self.fname, 'r')
+            self.my_file = open(self.fname, 'r', encoding='utf-8')
         except FileNotFoundError:
             pass
         else:
-            self.tableAction()
-    def saveFile(self):
+            self.tableaction()
+
+    def savefile(self):
         try:
-            self.filename = QFileDialog.getSaveFileName(self, 'Save File','/home',"Playlist(*.m3u8)")[0]
-            with open(self.filename, "wt") as file:
+            self.filename = QFileDialog.getSaveFileName(self, 'Save File','playlist', "Playlist(*.m3u8)")[0]
+            with open(self.filename, "wt", encoding='utf-8') as file:
                 channelcount = str(self.tableWidget_2.rowCount())
                 file.write('#EXTM3U\n')
                 for i in range(int(channelcount)):
@@ -132,7 +100,8 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
                                + '\n' + self.tableWidget_2.item(i, 2).text() + '\n')
         except FileNotFoundError:
             pass
-    def moveString(self):
+
+    def movestring(self):
         if not self.tableWidget.selectedItems():
             return
         self.groupButton.setEnabled(True)
@@ -142,7 +111,7 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         urows = set(rowtwo)
         frows = (list(urows))
         nrows = 0
-        for i in frows:
+        for i in range(len(frows)):
             self.tableWidget_2.setRowCount(self.tableWidget_2.rowCount() + 1)
             rows = self.tableWidget_2.rowCount() - 1
             self.tableWidget_2.setItem(rows, 0, QTableWidgetItem(self.tableWidget.item(frows[nrows], 0)))
@@ -152,27 +121,48 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
             self.tableWidget_2.resizeColumnToContents(1)
             nrows += 1
         self.label_2.setText('Каналов: ' + str(rows + 1))
-    def deleteRow(self):
+
+    def movedown(self):
+
+        row = self.tableWidget_2.currentRow()
+        column = self.tableWidget_2.currentColumn()
+        if row < self.tableWidget_2.rowCount() - 1:
+            self.tableWidget_2.insertRow(row + 2)
+            for i in range(self.tableWidget_2.columnCount()):
+                self.tableWidget_2.setItem(row + 2, i, self.tableWidget_2.takeItem(row, i))
+                self.tableWidget_2.setCurrentCell(row + 2, column)
+            self.tableWidget_2.removeRow(row)
+
+    def moveup(self):
+        row = self.tableWidget_2.currentRow()
+        column = self.tableWidget_2.currentColumn()
+        if row > 0:
+            self.tableWidget_2.insertRow(row - 1)
+            for i in range(self.tableWidget_2.columnCount()):
+                self.tableWidget_2.setItem(row - 1, i, self.tableWidget_2.takeItem(row + 1, i))
+                self.tableWidget_2.setCurrentCell(row - 1, column)
+            self.tableWidget_2.removeRow(row + 1)
+
+    def deleterow(self):
         self.sel_items = []
         for i in self.tableWidget_2.selectedItems():
             self.sel_items.append(i.row())
         indexes_items = sorted(set(self.sel_items), reverse=True)
         try:
             for ItemVal in indexes_items:
-                # rows = ItemVal.row()
-                # print(self.sel_items[ItemVal])
                 self.tableWidget_2.removeRow(ItemVal)
         except TypeError:
             pass
         self.label_2.setText('Каналов: ' + str(self.tableWidget_2.rowCount()))
-    def searchItem(self):
+
+    def searchitem(self):
         self.tableWidget.setSelectionMode(self.tableWidget.MultiSelection)
         result = []
         rows = self.tableWidget.rowCount()
         for i in range(rows):
-            result.append(self.tableWidget.item(i,0).text())
+            result.append(self.tableWidget.item(i, 0).text())
         s = self.lineEdit.text()
-        s_list = self.tableWidget.findItems(s,QtCore.Qt.MatchContains)
+        s_list = self.tableWidget.findItems(s, QtCore.Qt.MatchContains)
         row = []
         try:
             for i in range(len(s_list)):
@@ -183,7 +173,8 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         except:
             pass
         self.tableWidget.setSelectionMode(self.tableWidget.ExtendedSelection)
-    def moveAll(self):
+
+    def moveall(self):
         self.groupButton.setEnabled(True)
         rowstwo = self.tableWidget_2.rowCount()
         rows = self.tableWidget.rowCount()
@@ -191,7 +182,6 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
 
         try:
             for i in range(rows):
-                #print(i)
                 name = self.tableWidget.item(i, 0).text()
                 group = self.tableWidget.item(i, 1).text()
                 url = self.tableWidget.item(i, 2).text()
@@ -206,9 +196,10 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.label_2.setText('Каналов: ' + str(self.tableWidget_2.rowCount()))
         self.tableWidget_2.resizeColumnToContents(0)
         self.tableWidget_2.resizeColumnToContents(1)
-    def checkStatus(self):
-        self.offlinechannels = []
+
+    def checkstatus(self):
         self.progressBar.setVisible(True)
+        self.offlinechannels = []
         channelcount = str(self.tableWidget.rowCount())
         self.progressBar.setMaximum(int(channelcount)-1)
         online_list = []
@@ -230,7 +221,9 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
                     self.tableWidget.item(i, 0).setBackground(QtGui.QColor(96, 252, 143))
                     self.progressBar.setValue(i)
                     online_list.append('online')
+
             except:
+
                 self.tableWidget.item(i, 0).setBackground(QtGui.QColor(255, 110, 110))
                 self.progressBar.setValue(i)
                 offline_list.append('offline')
@@ -249,23 +242,28 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         msg.exec_()
         if self.offlinechannels:
             self.clearButton.setVisible(True)
-    def tableAction(self):
+
+    def clearoffline(self):
+        indexes = sorted(self.offlinechannels, reverse=True)
+        for rowidx in indexes:
+            self.tableWidget.removeRow(rowidx)
+        self.clearButton.setVisible(False)
+        self.label.setText('Каналов: ' + str(self.tableWidget.rowCount()))
+        self.offlinelabel.setVisible(False)
+        self.onlinelabel.setVisible(False)
+
+    def tableaction(self):
         self.testButton.setEnabled(True)
-        self.testButton.setStyleSheet(
-            'background: #60fc8f; color: black; border-style: solid; border-width: 1.5px')
+        self.testButton.setStyleSheet('background: #60fc8f; color: black; border-style: solid; border-width: 1.5px')
         data = self.my_file.read()
-        # rx = re.compile(r'''(?:-1,|-1 ,|0,|0 ,|0 tvg-rec="\S",|0 tvg-rec="\S" ,|-1 tvg-rec="\S",|-1 tvg-rec="\S" ,)+([^\n]+)''')
-        rx = re.compile(r'''(?<=,).*''')
+        rx = re.compile(r'''(?<=#EXTINF:-1,).*|(?<=#EXTINF:0,).*|(?<=#EXTINF:-1 ,).*|(?<=#EXTINF:0 ,).*|(?<=#EXTINF:0 tvg-rec=".",).*''')
         channel_name = rx.findall(data)
         group = re.compile(r'''#EXTGRP:+([^\n]+)''').findall(data)
-        # group = re.compile(r'''group-title="([\s\S]+?)"|#EXTGRP:+([^\n]+)''').findall(data)
         group_tag = re.compile(r'''group-title="([\s\S]+?)"''').findall(data)
-        # group = list(map(lambda m: tuple(filter(bool, m)), re.findall(r'''group-title="([\s\S]+?)"|#EXTGRP:+([^\n]+)''', data)))
-        logo_url = re.compile(r'''tvg-logo="([\s\S]+?)"''').findall(data)
         url = re.compile(r'''^http[^\s]+|rtmp[^\s]+|udp[^\s]+|rtsp[^\s]+''', re.MULTILINE).findall(data)
         check = re.compile(r'''#EXTM3U''').findall(data)
         if len(check) == 0:
-            self.clearTable()
+            self.cleartable()
         else:
             try:
                 start = -1
@@ -299,47 +297,45 @@ class MainWindow(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.onlinelabel.setVisible(False)
         self.offlinelabel.setVisible(False)
 
-    def showToGroup(self):
+    def showtogroup(self):
         self.wtogroup = ToGroup(self)
         self.wtogroup.show()
 
-    def showFromUrl(self):
+    def showfromurl(self):
         self.fromurl = OpenFromUrl(self)
         self.fromurl.show()
 
-    def showInsert(self):
+    def showinsert(self):
         self.groupButton.setEnabled(True)
         if not self.winsert:
             self.winsert = InsertWindow(self)
         self.winsert.show()
 
-    def clearTable(self):
+    def cleartable(self):
         msg = QMessageBox()
         msg.setWindowTitle("Ошибка")
         msg.setText("Неверный формат плейлиста")
         msg.setIcon(QMessageBox.Warning)
         msg.exec_()
 
-    def clearTableNew(self):
+    def cleartablenew(self):
         self.tableWidget_2.clear()
         self.tableWidget_2.setRowCount(0)
         self.tableWidget_2.setColumnCount(3)
         self.tableWidget_2.setHorizontalHeaderLabels(["Название", "Группа", "URL"])
         self.label_2.setText('Каналов: ')
-
     def msgabout(self):
         self.about = AboutWindow(self)
         self.about.show()
 
-    def TableClick(self):
+    def tableclick(self):
         self.player = VideoPlayer(self)
         self.player.resize(640, 480)
-        self.player.close()
         self.player.show()
 
 
 class InsertWindow(QtWidgets.QMainWindow, insert.Ui_insertForm, design.Ui_MainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent = None):
         super(InsertWindow, self).__init__(parent)
         self.setupUi(self)
         self.pushButton.clicked.connect(self.edittable)
@@ -366,13 +362,13 @@ class VideoPlayer(QtWidgets.QMainWindow, design.Ui_MainWindow):
         self.setWindowTitle("Предпросмотр")
         self.setFixedSize(640, 480)
         self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
-        videoWidget = QVideoWidget()
+        videowidget = QVideoWidget()
         widget = QWidget(self)
         self.setCentralWidget(widget)
         layout = QVBoxLayout()
-        layout.addWidget(videoWidget)
+        layout.addWidget(videowidget)
         widget.setLayout(layout)
-        self.mediaPlayer.setVideoOutput(videoWidget)
+        self.mediaPlayer.setVideoOutput(videowidget)
         currentrow = self.parent().tableWidget.currentItem().row()
         chanelurl = self.parent().tableWidget.item(currentrow, 2).text()
         self.mediaPlayer.setMedia(
@@ -385,16 +381,12 @@ class VideoPlayer(QtWidgets.QMainWindow, design.Ui_MainWindow):
         except:
            pass
 
-    def play(self):
-        self.mediaPlayer.setMedia(QMediaContent(QUrl('http://8f303af5.cbilant.com/iptv/HV8M5S8WZAFT4A/2139/index.m3u8')))
-        if self.mediaPlayer.state() == QMediaPlayer.PlayingState:
-            self.mediaPlayer.stop()
-        else:
-            self.mediaPlayer.play()
+    def closeEvent(self, event):
+        self.mediaPlayer.stop()
 
 
 class ToGroup(QtWidgets.QMainWindow, togroup.Ui_Form, design.Ui_MainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent = None):
         super(ToGroup, self).__init__(parent)
         self.setupUi(self)
         self.lineEdit.setText('БЕЗ ГРУППЫ')
@@ -407,6 +399,7 @@ class ToGroup(QtWidgets.QMainWindow, togroup.Ui_Form, design.Ui_MainWindow):
         ugroupitem = set(groupitem)
         fgroupitem = (list(ugroupitem))
         self.comboBox.addItems(fgroupitem)
+
 
     def addgroup(self):
         self.comboBox.addItem(self.lineEdit.text())
@@ -426,14 +419,14 @@ class ToGroup(QtWidgets.QMainWindow, togroup.Ui_Form, design.Ui_MainWindow):
 
 
 class AboutWindow(QtWidgets.QMainWindow, about.Ui_Form, design.Ui_MainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent = None):
         super(AboutWindow, self).__init__(parent)
         self.setupUi(self)
         self.label_2.setText('v.0.2.5')
 
 
 class OpenFromUrl(QtWidgets.QMainWindow, openurl.Ui_openFromUrlForm, design.Ui_MainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent = None):
         super(OpenFromUrl, self).__init__(parent)
         self.setupUi(self)
         self.pushButton.clicked.connect(self.openurl)
@@ -443,7 +436,9 @@ class OpenFromUrl(QtWidgets.QMainWindow, openurl.Ui_openFromUrlForm, design.Ui_M
         self.parent().tableWidget.setHorizontalHeaderLabels(["Название", "Группа", "URL"])
 
     def openurl(self):
+
         self.parent().testButton.setEnabled(True)
+
         try:
             req = requests.get(self.lineEdit.text())
         except:
@@ -455,23 +450,13 @@ class OpenFromUrl(QtWidgets.QMainWindow, openurl.Ui_openFromUrlForm, design.Ui_M
             self.parent().fromurl.close()
             return
         data = req.text
-        #rx = re.compile(
-            #r'''(?:-1,|-1 ,|0,|0 ,|0 tvg-rec="\S",|0 tvg-rec="\S" ,|-1 tvg-rec="\S",|-1 tvg-rec="\S" ,)+([^\n]+)''')
-        #channel_name = rx.findall(data)
-        #group = re.compile(r'''#EXTGRP:+([^\n]+)''').findall(data)
-        #url = re.compile(r'''^http[^\s]+|rtmp[^\s]+|udp[^\s]+|rtsp[^\s]+''', re.MULTILINE).findall(data)
-        #check = re.compile(r'''#EXTM3U''').findall(data)
-        rx = re.compile(r'''(?<=,).*''')
+        rx = re.compile(r'''(?<=#EXTINF:-1,).*|(?<=#EXTINF:0,).*''')
         channel_name = rx.findall(data)
         group = re.compile(r'''#EXTGRP:+([^\n]+)''').findall(data)
-        # group = re.compile(r'''group-title="([\s\S]+?)"|#EXTGRP:+([^\n]+)''').findall(data)
-        group_tag = re.compile(r'''group-title="([\s\S]+?)"''').findall(data)
-        # group = list(map(lambda m: tuple(filter(bool, m)), re.findall(r'''group-title="([\s\S]+?)"|#EXTGRP:+([^\n]+)''', data)))
-        logo_url = re.compile(r'''tvg-logo="([\s\S]+?)"''').findall(data)
         url = re.compile(r'''^http[^\s]+|rtmp[^\s]+|udp[^\s]+|rtsp[^\s]+''', re.MULTILINE).findall(data)
         check = re.compile(r'''#EXTM3U''').findall(data)
         if len(check) == 0:
-            self.clearTable()
+            self.cleartable()
         else:
             try:
                 start = -1
@@ -486,11 +471,8 @@ class OpenFromUrl(QtWidgets.QMainWindow, openurl.Ui_openFromUrlForm, design.Ui_M
                     self.parent().tableWidget.item(start, 0).setBackground(QtGui.QColor(198, 201, 195))
                     self.parent().tableWidget.item(start, 1).setBackground(QtGui.QColor(218, 222, 215))
                     self.parent().tableWidget.item(start, 2).setBackground(QtGui.QColor(235, 235, 235))
-                    if len(group) != 0 and len(group_tag) == 0:
+                    if len(group) != 0:
                         self.parent().tableWidget.setItem(start, 1, QTableWidgetItem(group[start]))
-                        self.parent().tableWidget.item(start, 1).setBackground(QtGui.QColor(218, 222, 215))
-                    elif len(group) == 0 and len(group_tag) != 0:
-                        self.parent().tableWidget.setItem(start, 1, QTableWidgetItem(group_tag[start]))
                         self.parent().tableWidget.item(start, 1).setBackground(QtGui.QColor(218, 222, 215))
                 self.parent().tableWidget.resizeColumnToContents(0)
                 self.parent().tableWidget.resizeColumnToContents(1)
@@ -502,8 +484,11 @@ class OpenFromUrl(QtWidgets.QMainWindow, openurl.Ui_openFromUrlForm, design.Ui_M
                 msg.setText("Плейлист имеет неизвестный формат")
                 msg.setIcon(QMessageBox.Warning)
                 msg.exec_()
+
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
+    app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
     window = MainWindow()
     window.show()
     app.exec()
